@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+
+{% block title %}Settle Up | SplitWise{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="mb-4">Settle Up</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'settlement_history' %}" class="btn btn-outline-primary">
+            <i class="fas fa-history me-1"></i> Settlement History
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- You Owe Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-arrow-up me-2"></i> You Owe</h5>
+            </div>
+            <div class="card-body">
+                {% if creditor_totals %}
+                    {% for creditor, total in creditor_totals.items %}
+                        <div class="card mb-3 settlement-card you-pay">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="mb-1">{{ creditor.username }}</h5>
+                                        <span class="text-muted">You owe ${{ total }}</span>
+                                    </div>
+                                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#payModal{{ creditor.id }}">
+                                        Pay
+                                    </button>
+                                </div>
+                                
+                                <div class="small">
+                                    <strong>Expenses:</strong>
+                                    <ul class="list-unstyled ms-3 mt-2">
+                                        {% for debt in debts_by_creditor|get_item:creditor %}
+                                            <li class="mb-1">
+                                                <i class="fas fa-receipt me-1 text-muted"></i>
+                                                {{ debt.expense.title }} - ${{ debt.amount }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pay Modal -->
+                        <div class="modal fade" id="payModal{{ creditor.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <!-- Change the form action from {% url 'settle_up' %} to {% url 'settle_up_no_group' %} -->
+                                    <form method="post" action="{% url 'settle_up_no_group' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="settlement_type" value="pay">
+                                        <input type="hidden" name="creditor_id" value="{{ creditor.id }}">
+                                        
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Pay {{ creditor.username }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>You owe <strong>{{ creditor.username }}</strong> a total of <strong>${{ total }}</strong>.</p>
+                                            
+                                            <div class="mb-3">
+                                                <label for="amount{{ creditor.id }}" class="form-label">Amount to Pay</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="number" class="form-control" id="amount{{ creditor.id }}" name="amount" 
+                                                           value="{{ total }}" min="0.01" step="0.01" max="{{ total }}" required>
+                                                </div>
+                                                <div class="form-text">Enter the amount you want to pay.</div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Record Payment</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                        <p class="mb-0">You don't owe anyone money.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- You Are Owed Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-arrow-down me-2"></i> You Are Owed</h5>
+            </div>
+            <div class="card-body">
+                {% if debtor_totals %}
+                    {% for debtor, total in debtor_totals.items %}
+                        <div class="card mb-3 settlement-card you-receive">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="mb-1">{{ debtor.username }}</h5>
+                                        <span class="text-muted">Owes you ${{ total }}</span>
+                                    </div>
+                                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#receiveModal{{ debtor.id }}">
+                                        Record
+                                    </button>
+                                </div>
+                                
+                                <div class="small">
+                                    <strong>Expenses:</strong>
+                                    <ul class="list-unstyled ms-3 mt-2">
+                                        {% for debt in debts_by_debtor|get_item:debtor %}
+                                            <li class="mb-1">
+                                                <i class="fas fa-receipt me-1 text-muted"></i>
+                                                {{ debt.expense.title }} - ${{ debt.amount }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Receive Modal -->
+                        <div class="modal fade" id="receiveModal{{ debtor.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form method="post" action="{% url 'settle_up_no_group' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="settlement_type" value="receive">
+                                        <input type="hidden" name="debtor_id" value="{{ debtor.id }}">
+                                        
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Record Payment from {{ debtor.username }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong>{{ debtor.username }}</strong> owes you a total of <strong>${{ total }}</strong>.</p>
+                                            
+                                            <div class="mb-3">
+                                                <label for="amount{{ debtor.id }}" class="form-label">Amount Received</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="number" class="form-control" id="amount{{ debtor.id }}" name="amount" 
+                                                           value="{{ total }}" min="0.01" step="0.01" max="{{ total }}" required>
+                                                </div>
+                                                <div class="form-text">Enter the amount you received.</div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Record Payment</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-info fa-3x mb-3"></i>
+                        <p class="mb-0">No one owes you money.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settlement Tips -->
+<div class="card mt-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Settlement Tips</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-credit-card fa-2x text-primary me-3"></i>
+                    </div>
+                    <div>
+                        <h6>Record Payments</h6>
+                        <p class="small text-muted mb-0">Always record payments to keep your balances accurate.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-hand-holding-usd fa-2x text-primary me-3"></i>
+                    </div>
+                    <div>
+                        <h6>Partial Payments</h6>
+                        <p class="small text-muted mb-0">You can make partial payments if you can't settle the full amount.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-history fa-2x text-primary me-3"></i>
+                    </div>
+                    <div>
+                        <h6>View History</h6>
+                        <p class="small text-muted mb-0">Check your settlement history to track past payments.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Custom template filter for dictionary access
+    if (!window.django) {
+        window.django = {};
+    }
+    django.get_item = function(dict, key) {
+        return dict[key] || [];
+    };
+</script>
+{% endblock %}

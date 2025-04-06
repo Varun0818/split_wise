@@ -1,0 +1,256 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Settle Up - Splitwise Clone{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Settle Up</h1>
+    
+    <div class="row">
+        <!-- People you owe -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-arrow-up-circle me-2"></i> Pay Your Debts
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if creditor_totals %}
+                        <div class="list-group mb-3">
+                            {% for creditor, total in creditor_totals.items %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="mb-0">{{ creditor.username }}</h5>
+                                        <span class="badge bg-danger">
+                                            ${{ total|floatformat:2 }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="accordion" id="creditorAccordion{{ creditor.id }}">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#creditorCollapse{{ creditor.id }}">
+                                                    View Expense Details
+                                                </button>
+                                            </h2>
+                                            <div id="creditorCollapse{{ creditor.id }}" class="accordion-collapse collapse" data-bs-parent="#creditorAccordion{{ creditor.id }}">
+                                                <div class="accordion-body p-0">
+                                                    <ul class="list-group list-group-flush">
+                                                        {% for debt in debts_by_creditor|get_item:creditor %}
+                                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                <div>
+                                                                    <p class="mb-0">{{ debt.expense.title }}</p>
+                                                                    <small class="text-muted">{{ debt.expense.created_at|date:"M d, Y" }}</small>
+                                                                </div>
+                                                                <span>${{ debt.amount|floatformat:2 }}</span>
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#payModal{{ creditor.id }}">
+                                            Pay {{ creditor.username }}
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Payment Modal -->
+                                    <div class="modal fade" id="payModal{{ creditor.id }}" tabindex="-1" aria-labelledby="payModalLabel{{ creditor.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="payModalLabel{{ creditor.id }}">Pay {{ creditor.username }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <form method="POST">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="settlement_type" value="pay">
+                                                    <input type="hidden" name="creditor_id" value="{{ creditor.id }}">
+                                                    
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label for="amount{{ creditor.id }}" class="form-label">Amount to Pay</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">$</span>
+                                                                <input type="number" class="form-control" id="amount{{ creditor.id }}" name="amount" min="0.01" step="0.01" max="{{ total }}" value="{{ total }}">
+                                                            </div>
+                                                            <div class="form-text">
+                                                                You owe {{ creditor.username }} a total of ${{ total|floatformat:2 }}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Payment Method</label>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" name="payment_method" id="cash{{ creditor.id }}" value="cash" checked>
+                                                                <label class="form-check-label" for="cash{{ creditor.id }}">
+                                                                    Cash
+                                                                </label>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" name="payment_method" id="bank{{ creditor.id }}" value="bank">
+                                                                <label class="form-check-label" for="bank{{ creditor.id }}">
+                                                                    Bank Transfer
+                                                                </label>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" name="payment_method" id="other{{ creditor.id }}" value="other">
+                                                                <label class="form-check-label" for="other{{ creditor.id }}">
+                                                                    Other
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-primary">Confirm Payment</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-emoji-smile fs-1"></i>
+                            <p class="mt-2">You don't owe anyone money right now.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- People who owe you -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-arrow-down-circle me-2"></i> Record Payments Received
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if debtor_totals %}
+                        <div class="list-group mb-3">
+                            {% for debtor, total in debtor_totals.items %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="mb-0">{{ debtor.username }}</h5>
+                                        <span class="badge bg-success">
+                                            ${{ total|floatformat:2 }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="accordion" id="debtorAccordion{{ debtor.id }}">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#debtorCollapse{{ debtor.id }}">
+                                                    View Expense Details
+                                                </button>
+                                            </h2>
+                                            <div id="debtorCollapse{{ debtor.id }}" class="accordion-collapse collapse" data-bs-parent="#debtorAccordion{{ debtor.id }}">
+                                                <div class="accordion-body p-0">
+                                                    <ul class="list-group list-group-flush">
+                                                        {% for debt in debts_by_debtor|get_item:debtor %}
+                                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                <div>
+                                                                    <p class="mb-0">{{ debt.expense.title }}</p>
+                                                                    <small class="text-muted">{{ debt.expense.created_at|date:"M d, Y" }}</small>
+                                                                </div>
+                                                                <span>${{ debt.amount|floatformat:2 }}</span>
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#receiveModal{{ debtor.id }}">
+                                            Record Payment from {{ debtor.username }}
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Receive Payment Modal -->
+                                    <div class="modal fade" id="receiveModal{{ debtor.id }}" tabindex="-1" aria-labelledby="receiveModalLabel{{ debtor.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="receiveModalLabel{{ debtor.id }}">Record Payment from {{ debtor.username }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <form method="POST">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="settlement_type" value="receive">
+                                                    <input type="hidden" name="debtor_id" value="{{ debtor.id }}">
+                                                    
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label for="amount{{ debtor.id }}" class="form-label">Amount Received</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">$</span>
+                                                                <input type="number" class="form-control" id="amount{{ debtor.id }}" name="amount" min="0.01" step="0.01" max="{{ total }}" value="{{ total }}">
+                                                            </div>
+                                                            <div class="form-text">
+                                                                {{ debtor.username }} owes you a total of ${{ total|floatformat:2 }}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Payment Method</label>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" name="payment_method" id="cash_receive{{ debtor.id }}" value="cash" checked>
+                                                                <label class="form-check-label" for="cash_receive{{ debtor.id }}">
+                                                                    Cash
+                                                                </label>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" name="payment_method" id="bank_receive{{ debtor.id }}" value="bank">
+                                                                <label class="form-check-label" for="bank_receive{{ debtor.id }}">
+                                                                    Bank Transfer
+                                                                </label>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" name="payment_method" id="other_receive{{ debtor.id }}" value="other">
+                                                                <label class="form-check-label" for="other_receive{{ debtor.id }}">
+                                                                    Other
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-success">Confirm Receipt</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-emoji-neutral fs-1"></i>
+                            <p class="mt-2">No one owes you money right now.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Back to Dashboard -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

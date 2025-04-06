@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile | SplitWise{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>My Profile</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Profile Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="id_username" value="{{ user.username }}" disabled>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="id_email" value="{{ user.email }}" disabled>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_preferred_currency" class="form-label">Preferred Currency</label>
+                            {{ form.preferred_currency }}
+                            <div class="form-text">This currency will be used for display purposes.</div>
+                        </div>
+                        
+                        {% if form.notification_preferences %}
+                        <div class="mb-3">
+                            <label class="form-label">Notification Preferences</label>
+                            <div class="form-check">
+                                {{ form.notification_preferences }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

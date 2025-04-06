@@ -1,0 +1,17 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Home - Splitwise Clone{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to Splitwise Clone</h1>
+    <p class="lead">A simple way to split expenses with friends and family</p>
+    <hr class="my-4">
+    <p>Track bills, share expenses, and make sure everyone gets paid back.</p>
+    {% if not user.is_authenticated %}
+        <a class="btn btn-primary btn-lg" href="{% url 'register' %}" role="button">Get Started</a>
+    {% else %}
+        <a class="btn btn-primary btn-lg" href="{% url 'dashboard' %}" role="button">Go to Dashboard</a>
+    {% endif %}
+</div>
+{% endblock %}

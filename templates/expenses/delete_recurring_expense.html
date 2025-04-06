@@ -1,0 +1,38 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Delete Recurring Expense - Splitwise Clone{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h2>Delete Recurring Expense</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">Are you sure you want to delete the recurring expense "{{ expense.title }}"?</p>
+                <p>This action cannot be undone. Any future expenses will no longer be generated.</p>
+                
+                <div class="alert alert-info">
+                    <h5>Expense Details:</h5>
+                    <ul>
+                        <li><strong>Title:</strong> {{ expense.title }}</li>
+                        <li><strong>Amount:</strong> ${{ expense.amount }}</li>
+                        <li><strong>Frequency:</strong> {{ expense.get_frequency_display }}</li>
+                        <li><strong>Next Due Date:</strong> {{ expense.next_due_date }}</li>
+                        <li><strong>Group:</strong> {{ expense.group.name }}</li>
+                    </ul>
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger">Yes, Delete This Recurring Expense</button>
+                        <a href="{% url 'recurring_expenses' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

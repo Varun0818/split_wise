@@ -1,0 +1,6 @@
+<!-- In your navigation menu -->
+<li class="nav-item">
+    <a class="nav-link {% if request.path == '/expenses/' %}active{% endif %}" href="{% url 'expense_list' %}">
+        <i class="fas fa-receipt me-1"></i> Expenses
+    </a>
+</li>

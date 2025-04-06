@@ -1,0 +1,90 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2>User Profile</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <img src="https://via.placeholder.com/150" alt="Profile Picture" class="img-fluid rounded-circle mb-3">
+                            <h4>{{ user.username }}</h4>
+                            <p class="text-muted">{{ user.email }}</p>
+                        </div>
+                        <div class="col-md-8">
+                            <h5>Account Information</h5>
+                            <hr>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Username:</strong></div>
+                                <div class="col-sm-8">{{ user.username }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>First Name:</strong></div>
+                                <div class="col-sm-8">{{ user.first_name|default:"Not provided" }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Last Name:</strong></div>
+                                <div class="col-sm-8">{{ user.last_name|default:"Not provided" }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Email:</strong></div>
+                                <div class="col-sm-8">{{ user.email|default:"Not provided" }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Date Joined:</strong></div>
+                                <div class="col-sm-8">{{ user.date_joined|date:"F j, Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="#" class="btn btn-primary">Edit Profile</a>
+                        <a href="#" class="btn btn-outline-secondary">Change Password</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3>Activity Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Groups</h5>
+                                    <p class="card-text display-4">{{ user.group_set.count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Expenses</h5>
+                                    <p class="card-text display-4">{{ user.expense_set.count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Settlements</h5>
+                                    <!-- Use a simpler approach without complex filtering -->
+                                    <p class="card-text display-4">{{ settled_debts_count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

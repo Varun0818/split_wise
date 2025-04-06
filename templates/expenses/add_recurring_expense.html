@@ -1,0 +1,298 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Add Recurring Expense - Splitwise Clone{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2>Add New Recurring Expense</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="recurring-expense-form">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.amount.id_for_label }}" class="form-label">Amount</label>
+                        {{ form.amount }}
+                        {% if form.amount.errors %}
+                            <div class="text-danger">{{ form.amount.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.paid_by.id_for_label }}" class="form-label">Paid By</label>
+                        {{ form.paid_by }}
+                        {% if form.paid_by.errors %}
+                            <div class="text-danger">{{ form.paid_by.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.group.id_for_label }}" class="form-label">Group</label>
+                        {{ form.group }}
+                        {% if form.group.errors %}
+                            <div class="text-danger">{{ form.group.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.frequency.id_for_label }}" class="form-label">Frequency</label>
+                        {{ form.frequency }}
+                        {% if form.frequency.errors %}
+                            <div class="text-danger">{{ form.frequency.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.next_due_date.id_for_label }}" class="form-label">Next Due Date</label>
+                        {{ form.next_due_date }}
+                        {% if form.next_due_date.errors %}
+                            <div class="text-danger">{{ form.next_due_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.split_type.id_for_label }}" class="form-label">Split Type</label>
+                        {{ form.split_type }}
+                        {% if form.split_type.errors %}
+                            <div class="text-danger">{{ form.split_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Participants</label>
+                        <div class="participant-list">
+                            {% for participant in form.participants %}
+                                <div class="form-check">
+                                    {{ participant }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.participants.errors %}
+                            <div class="text-danger">{{ form.participants.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Dynamic fields for percentage and direct splits -->
+                    <div id="percentage-fields" class="mb-3" style="display: none;">
+                        <h4>Percentage Split</h4>
+                        <p class="text-muted">Enter percentage for each participant (must sum to 100%)</p>
+                        <div id="percentage-inputs"></div>
+                        <div class="mt-2">
+                            <span>Total: </span><span id="percentage-total">0</span><span>%</span>
+                        </div>
+                    </div>
+                    
+                    <div id="direct-fields" class="mb-3" style="display: none;">
+                        <h4>Direct Split</h4>
+                        <p class="text-muted">Enter exact amount for each participant (must sum to total expense amount)</p>
+                        <div id="direct-inputs"></div>
+                        <div class="mt-2">
+                            <span>Total: $</span><span id="direct-total">0.00</span>
+                            <span> / $</span><span id="expense-amount">0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Add Recurring Expense</button>
+                        <a href="{% url 'recurring_expenses' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const splitTypeSelect = document.getElementById('split-type-select');
+        const percentageFields = document.getElementById('percentage-fields');
+        const directFields = document.getElementById('direct-fields');
+        const percentageInputs = document.getElementById('percentage-inputs');
+        const directInputs = document.getElementById('direct-inputs');
+        const percentageTotal = document.getElementById('percentage-total');
+        const directTotal = document.getElementById('direct-total');
+        const expenseAmount = document.getElementById('expense-amount');
+        const amountInput = document.getElementById('id_amount');
+        const participantCheckboxes = document.querySelectorAll('.participant-list input[type="checkbox"]');
+        
+        // Update expense amount display when amount changes
+        amountInput.addEventListener('input', function() {
+            expenseAmount.textContent = parseFloat(this.value || 0).toFixed(2);
+            updateDirectFields();
+        });
+        
+        // Initialize expense amount display
+        expenseAmount.textContent = parseFloat(amountInput.value || 0).toFixed(2);
+        
+        // Handle split type changes
+        splitTypeSelect.addEventListener('change', function() {
+            const splitType = this.value;
+            
+            // Hide all dynamic fields first
+            percentageFields.style.display = 'none';
+            directFields.style.display = 'none';
+            
+            // Show relevant fields based on split type
+            if (splitType === 'PERCENTAGE') {
+                percentageFields.style.display = 'block';
+                updatePercentageFields();
+            } else if (splitType === 'DIRECT') {
+                directFields.style.display = 'block';
+                updateDirectFields();
+            }
+        });
+        
+        // Handle participant checkbox changes
+        participantCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (splitTypeSelect.value === 'PERCENTAGE') {
+                    updatePercentageFields();
+                } else if (splitTypeSelect.value === 'DIRECT') {
+                    updateDirectFields();
+                }
+            });
+        });
+        
+        // Update percentage fields based on selected participants
+        function updatePercentageFields() {
+            percentageInputs.innerHTML = '';
+            let selectedParticipants = getSelectedParticipants();
+            
+            selectedParticipants.forEach(participant => {
+                const div = document.createElement('div');
+                div.className = 'mb-2';
+                
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.textContent = participant.label;
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.name = `percentage_${participant.id}`;
+                input.className = 'form-control percentage-input';
+                input.min = '0';
+                input.max = '100';
+                input.step = '0.01';
+                input.value = (100 / selectedParticipants.length).toFixed(2);
+                
+                input.addEventListener('input', updatePercentageTotal);
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                percentageInputs.appendChild(div);
+            });
+            
+            updatePercentageTotal();
+        }
+        
+        // Update direct amount fields based on selected participants
+        function updateDirectFields() {
+            directInputs.innerHTML = '';
+            let selectedParticipants = getSelectedParticipants();
+            let amount = parseFloat(amountInput.value || 0);
+            let amountPerPerson = selectedParticipants.length > 0 ? amount / selectedParticipants.length : 0;
+            
+            selectedParticipants.forEach(participant => {
+                const div = document.createElement('div');
+                div.className = 'mb-2';
+                
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.textContent = participant.label;
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.name = `amount_${participant.id}`;
+                input.className = 'form-control direct-input';
+                input.min = '0';
+                input.step = '0.01';
+                input.value = amountPerPerson.toFixed(2);
+                
+                input.addEventListener('input', updateDirectTotal);
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                directInputs.appendChild(div);
+            });
+            
+            updateDirectTotal();
+        }
+        
+        // Calculate and update percentage total
+        function updatePercentageTotal() {
+            const inputs = document.querySelectorAll('.percentage-input');
+            let total = 0;
+            
+            inputs.forEach(input => {
+                total += parseFloat(input.value || 0);
+            });
+            
+            percentageTotal.textContent = total.toFixed(2);
+            
+            // Highlight if not 100%
+            if (Math.abs(total - 100) > 0.01) {
+                percentageTotal.className = 'text-danger';
+            } else {
+                percentageTotal.className = 'text-success';
+            }
+        }
+        
+        // Calculate and update direct amount total
+        function updateDirectTotal() {
+            const inputs = document.querySelectorAll('.direct-input');
+            let total = 0;
+            
+            inputs.forEach(input => {
+                total += parseFloat(input.value || 0);
+            });
+            
+            directTotal.textContent = total.toFixed(2);
+            
+            // Highlight if not matching expense amount
+            const amount = parseFloat(amountInput.value || 0);
+            if (Math.abs(total - amount) > 0.01) {
+                directTotal.className = 'text-danger';
+            } else {
+                directTotal.className = 'text-success';
+            }
+        }
+        
+        // Get selected participants
+        function getSelectedParticipants() {
+            const selected = [];
+            
+            participantCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selected.push({
+                        id: checkbox.value,
+                        label: checkbox.parentNode.textContent.trim()
+                    });
+                }
+            });
+            
+            return selected;
+        }
+        
+        // Initialize based on current split type
+        const currentSplitType = splitTypeSelect.value;
+        if (currentSplitType === 'PERCENTAGE') {
+            percentageFields.style.display = 'block';
+            updatePercentageFields();
+        } else if (currentSplitType === 'DIRECT') {
+            directFields.style.display = 'block';
+            updateDirectFields();
+        }
+    });
+</script>
+{% endblock %}

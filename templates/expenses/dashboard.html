@@ -1,0 +1,248 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Dashboard - Splitwise Clone{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Overall Summary Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Your Balance Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="p-3 border rounded {% if total_owed > 0 %}bg-danger-subtle{% else %}bg-light{% endif %}">
+                                <h5>You Owe</h5>
+                                <h3 class="{% if total_owed > 0 %}text-danger{% endif %}">
+                                    ${{ total_owed|floatformat:2 }}
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="p-3 border rounded {% if total_to_receive > 0 %}bg-success-subtle{% else %}bg-light{% endif %}">
+                                <h5>You Are Owed</h5>
+                                <h3 class="{% if total_to_receive > 0 %}text-success{% endif %}">
+                                    ${{ total_to_receive|floatformat:2 }}
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded 
+                                {% if net_balance > 0 %}bg-success-subtle
+                                {% elif net_balance < 0 %}bg-danger-subtle
+                                {% else %}bg-light{% endif %}">
+                                <h5>Net Balance</h5>
+                                <h3 class="
+                                    {% if net_balance > 0 %}text-success
+                                    {% elif net_balance < 0 %}text-danger
+                                    {% endif %}">
+                                    ${{ net_balance|floatformat:2 }}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if net_balance == 0 %}
+                    <div class="alert alert-success mt-3 text-center">
+                        <i class="bi bi-check-circle-fill me-2"></i> You're all settled up!
+                    </div>
+                    {% else %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-3">
+                        <a href="{% url 'settle_up' %}" class="btn btn-primary">
+                            <i class="bi bi-cash-coin me-2"></i> Settle Up
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Breakdown -->
+    <div class="row mb-4">
+        <!-- People who owe you -->
+        <div class="col-md-6 mb-4 mb-md-0">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-arrow-down-circle me-2"></i> People Who Owe You
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if creditor_summary %}
+                        <div class="list-group">
+                            {% for item in creditor_summary %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-person-circle me-2"></i>
+                                        {{ item.user.username }}
+                                    </div>
+                                    <span class="badge bg-success rounded-pill">
+                                        ${{ item.total_amount|floatformat:2 }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-emoji-neutral fs-1"></i>
+                            <p class="mt-2">No one owes you money right now.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- People you owe -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-arrow-up-circle me-2"></i> People You Owe
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if debtor_summary %}
+                        <div class="list-group">
+                            {% for item in debtor_summary %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-person-circle me-2"></i>
+                                        {{ item.user.username }}
+                                    </div>
+                                    <span class="badge bg-danger rounded-pill">
+                                        ${{ item.total_amount|floatformat:2 }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-emoji-smile fs-1"></i>
+                            <p class="mt-2">You don't owe anyone money right now.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Group Breakdown -->
+    <h3 class="mb-3">Your Groups</h3>
+    <div class="row">
+        {% if group_summary %}
+            {% for group_data in group_summary %}
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">{{ group_data.group.name }}</h4>
+                            <a href="{% url 'group_detail' group_data.group.id %}" class="btn btn-sm btn-outline-primary">
+                                View Group
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="p-2 border rounded text-center {% if group_data.owed > 0 %}bg-danger-subtle{% else %}bg-light{% endif %}">
+                                        <h6>You Owe</h6>
+                                        <h5 class="{% if group_data.owed > 0 %}text-danger{% endif %}">
+                                            ${{ group_data.owed|floatformat:2 }}
+                                        </h5>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded text-center {% if group_data.to_receive > 0 %}bg-success-subtle{% else %}bg-light{% endif %}">
+                                        <h6>You Are Owed</h6>
+                                        <h5 class="{% if group_data.to_receive > 0 %}text-success{% endif %}">
+                                            ${{ group_data.to_receive|floatformat:2 }}
+                                        </h5>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h6 class="border-bottom pb-2 mb-3">Recent Expenses</h6>
+                            {% if group_data.recent_expenses %}
+                                <div class="list-group">
+                                    {% for expense in group_data.recent_expenses %}
+                                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ expense.title }}</h6>
+                                                <small class="text-muted">
+                                                    Paid by {{ expense.paid_by.username }} on {{ expense.created_at|date:"M d, Y" }}
+                                                </small>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill">${{ expense.amount|floatformat:2 }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No recent expenses in this group.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    You're not a member of any groups yet. <a href="{% url 'create_group' %}" class="alert-link">Create a group</a> to start tracking expenses.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recurring Expenses Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calendar-check me-2"></i> Recurring Expenses
+                    </h4>
+                    <a href="{% url 'recurring_expenses' %}" class="btn btn-sm btn-light">
+                        Manage Recurring
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- This section will show upcoming recurring expenses -->
+                    {% if recurring_expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Amount</th>
+                                        <th>Frequency</th>
+                                        <th>Next Due</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in recurring_expenses %}
+                                        <tr>
+                                            <td>{{ expense.title }}</td>
+                                            <td>${{ expense.amount|floatformat:2 }}</td>
+                                            <td>{{ expense.get_frequency_display }}</td>
+                                            <td>{{ expense.next_due_date|date:"M d, Y" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <p class="mb-0">No recurring expenses set up yet.</p>
+                            <a href="{% url 'add_recurring_expense' %}" class="btn btn-outline-primary mt-2">
+                                <i class="bi bi-plus-circle me-2"></i> Add Recurring Expense
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | SplitWise{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="mb-4">Dashboard</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'add_expense' %}" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-1"></i> Add Expense
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <h5 class="card-title">Total Balance</h5>
+                <p class="amount {% if total_balance > 0 %}amount-positive{% elif total_balance < 0 %}amount-negative{% else %}amount-neutral{% endif %}">
+                    {% if total_balance > 0 %}
+                        +${{ total_balance }}
+                    {% elif total_balance < 0 %}
+                        -${{ total_balance|abs }}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <h5 class="card-title">You Owe</h5>
+                <p class="amount amount-negative">${{ total_owed }}</p>
+                {% if total_owed > 0 %}
+                <a href="{% url 'settle_up_no_group' %}" class="btn btn-sm btn-outline-danger mt-2">Pay Now</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <h5 class="card-title">You Are Owed</h5>
+                <p class="amount amount-positive">${{ total_owing }}</p>
+                {% if total_owing > 0 %}
+                <a href="{% url 'settle_up_no_group' %}" class="btn btn-sm btn-outline-success mt-2">Remind</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Expenses</h5>
+                <a href="{% url 'user_expense_history' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_expenses %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Group</th>
+                                <th>Amount</th>
+                                <th>Your Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in recent_expenses %}
+                            <tr class="expense-item">
+                                <td>{{ expense.created_at|date:"M d" }}</td>
+                                <td>
+                                    <a href="{% url 'expense_detail' expense.id %}" class="text-decoration-none">
+                                        {{ expense.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if expense.group %}
+                                    <a href="{% url 'group_detail' expense.group.id %}" class="badge bg-info text-decoration-none">
+                                        {{ expense.group.name }}
+                                    </a>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No Group</span>
+                                    {% endif %}
+                                </td>
+                                <td>${{ expense.amount }}</td>
+                                <td class="{% if expense.paid_by == user %}amount-positive{% else %}amount-negative{% endif %}">
+                                    {% if expense.paid_by == user %}
+                                        +${{ expense.user_share }}
+                                    {% else %}
+                                        -${{ expense.user_share }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-4">
+                    <p class="text-muted mb-0">No recent expenses</p>
+                    <a href="{% url 'add_expense' %}" class="btn btn-primary mt-3">Add Your First Expense</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mt-4 mt-lg-0">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Your Groups</h5>
+                <a href="{% url 'group_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if user_groups %}
+                <div class="list-group list-group-flush">
+                    {% for group in user_groups %}
+                    <a href="{% url 'group_detail' group.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-users me-2 text-muted"></i>
+                            {{ group.name }}
+                        </div>
+                        <span class="badge {% if group.net_balance > 0 %}bg-success{% elif group.net_balance < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {% if group.net_balance > 0 %}
+                                +${{ group.net_balance }}
+                            {% elif group.net_balance < 0 %}
+                                -${{ group.net_balance|abs }}
+                            {% else %}
+                                $0
+                            {% endif %}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center p-4">
+                    <p class="text-muted mb-0">You're not in any groups yet</p>
+                    <a href="{% url 'create_group' %}" class="btn btn-primary mt-3">Create a Group</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Upcoming Recurring Expenses -->
+        {% if upcoming_recurring %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upcoming Recurring Expenses</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for expense in upcoming_recurring %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ expense.title }}</h6>
+                                <small class="text-muted">Due: {{ expense.next_due_date|date:"M d, Y" }}</small>
+                            </div>
+                            <span class="badge bg-primary">${{ expense.amount }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

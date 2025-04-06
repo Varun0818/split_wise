@@ -1,0 +1,44 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Add Members to {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2>Add Members to {{ group.name }}</h2>
+                    <a href="{% url 'group_detail' group_id=group.id %}" class="btn btn-outline-secondary">Back to Group</a>
+                </div>
+                <div class="card-body">
+                    {% if potential_members %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Select Users to Add</label>
+                                <div class="list-group">
+                                    {% for user in potential_members %}
+                                        <label class="list-group-item">
+                                            <input class="form-check-input me-1" type="checkbox" name="users" value="{{ user.id }}">
+                                            {{ user.get_full_name|default:user.username }}
+                                            <small class="text-muted">({{ user.email }})</small>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="submit" class="btn btn-primary">Add Selected Members</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            There are no more users to add to this group.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

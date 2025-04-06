@@ -1,0 +1,84 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Recurring Expenses - Splitwise Clone{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>Recurring Expenses</h1>
+        <p>Manage your recurring expenses like rent, subscriptions, and utilities.</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+            <a href="{% url 'add_recurring_expense' %}" class="btn btn-primary">Add Recurring Expense</a>
+        </div>
+        
+        {% if recurring_expenses %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Amount</th>
+                            <th>Paid By</th>
+                            <th>Group</th>
+                            <th>Frequency</th>
+                            <th>Next Due Date</th>
+                            <th>Split Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in recurring_expenses %}
+                            <tr>
+                                <td>{{ expense.title }}</td>
+                                <td>${{ expense.amount }}</td>
+                                <td>{{ expense.paid_by.username }}</td>
+                                <td>{{ expense.group.name }}</td>
+                                <td>{{ expense.get_frequency_display }}</td>
+                                <td>{{ expense.next_due_date }}</td>
+                                <td>{{ expense.get_split_type_display }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'edit_recurring_expense' expense.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <a href="{% url 'delete_recurring_expense' expense.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                                        {% if expense.paid_by == user %}
+                                            <a href="{% url 'generate_recurring_expense_now' expense.id %}" class="btn btn-sm btn-outline-success">Generate Now</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                You don't have any recurring expenses yet. Click "Add Recurring Expense" to create one.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3>About Recurring Expenses</h3>
+            </div>
+            <div class="card-body">
+                <p>Recurring expenses are automatically generated based on the frequency you set:</p>
+                <ul>
+                    <li><strong>Daily:</strong> Generated every day</li>
+                    <li><strong>Weekly:</strong> Generated every 7 days</li>
+                    <li><strong>Monthly:</strong> Generated on the same day each month</li>
+                </ul>
+                <p>You can also manually generate a recurring expense by clicking "Generate Now".</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

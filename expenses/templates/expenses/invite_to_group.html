@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Invite to {{ group.name }} | SplitWise{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Invite to Group: {{ group.name }}</h1>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'group_detail' group_id=group.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Group
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Add a new member</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Enter name or username</label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   placeholder="Enter name or username" required>
+                            <div class="form-text">
+                                If the person doesn't have an account, we'll create one for them.
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-1"></i> Add to Group
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

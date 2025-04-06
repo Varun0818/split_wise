@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Settlement Summary - {{ group.name }} | SplitWise{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Settlement Summary - {{ group.name }}</h1>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'group_detail' group_id=group.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Group
+            </a>
+        </div>
+    </div>
+
+    <!-- User's Balance Summary -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Your Balance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-danger">You Owe</h6>
+                                    <p class="h3 mb-0">${{ total_debt|default:"0.00" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-success">You Are Owed</h6>
+                                    <p class="h3 mb-0">${{ total_credit|default:"0.00" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if user_debts or user_credits %}
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{% url 'settle_up' group_id=group.id %}" class="btn btn-primary">
+                            <i class="fas fa-money-bill-wave me-1"></i> Settle Up
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debts You Owe -->
+    {% if user_debts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Debts You Owe</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>You Owe</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for debt in user_debts %}
+                                <tr>
+                                    <td>{{ debt.creditor.username }}</td>
+                                    <td class="text-danger">${{ debt.amount }}</td>
+                                    <td>
+                                        <a href="{% url 'settle_up_with_user' group_id=group.id creditor_id=debt.creditor.id %}" class="btn btn-sm btn-outline-primary">
+                                            Settle
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Debts Owed to You -->
+    {% if user_credits %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Debts Owed to You</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Owes You</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for credit in user_credits %}
+                                <tr>
+                                    <td>{{ credit.debtor.username }}</td>
+                                    <td class="text-success">${{ credit.amount }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-success" onclick="sendReminder('{{ credit.debtor.username }}', '{{ credit.amount }}')">
+                                            Remind
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Group Debts -->
+    {% if debts %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">All Group Debts</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Debtor</th>
+                                    <th>Creditor</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for debt in debts %}
+                                <tr>
+                                    <td>{{ debt.debtor.username }}</td>
+                                    <td>{{ debt.creditor.username }}</td>
+                                    <td>${{ debt.amount }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i> There are no outstanding debts in this group.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function sendReminder(username, amount) {
+    // This is a placeholder for sending a reminder
+    alert(`Reminder sent to ${username} for $${amount}`);
+    // In a real app, you would make an AJAX call to send the reminder
+}
+</script>
+{% endblock %}

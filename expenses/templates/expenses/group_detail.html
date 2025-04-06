@@ -1,0 +1,546 @@
+{% extends 'base.html' %}
+{% load expense_extras %}
+
+{% block title %}{{ group.name }} | SplitWise{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'group_list' %}">Groups</a></li>
+                <li class="breadcrumb-item active">{{ group.name }}</li>
+            </ol>
+        </nav>
+        <h1 class="mb-2">{{ group.name }}</h1>
+        <p class="text-muted">{{ group.members.count }} members · Created {{ group.created_at|date:"M d, Y" }}</p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group">
+            <a href="{% url 'add_expense' %}?group={{ group.id }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Add Expense
+            </a>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'group_expense_history' group.id %}">
+                    <i class="fas fa-history me-2"></i> Expense History
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'group_settlement_summary' group.id %}">
+                    <i class="fas fa-balance-scale me-2"></i> Settlement Summary
+                </a></li>
+                <!-- Add CSV Export Option -->
+                <li><a class="dropdown-item" href="{% url 'export_group_expenses' group.id %}">
+                    <i class="fas fa-file-csv me-2"></i> Export to CSV
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'edit_group' group.id %}">
+                    <i class="fas fa-edit me-2"></i> Edit Group
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Group Overview -->
+<div class="row mb-4">
+    <!-- Member Balances -->
+    <div class="col-lg-8 mb-4 mb-lg-0">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Member Balances</h5>
+                <div>
+                    <!-- Toggle between detailed and simplified view -->
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <input type="radio" class="btn-check" name="balanceView" id="detailedView" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary" for="detailedView">Detailed</label>
+                        <input type="radio" class="btn-check" name="balanceView" id="simplifiedView" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="simplifiedView">Simplified</label>
+                    </div>
+                    <a href="{% url 'group_settlement_summary' group.id %}" class="btn btn-sm btn-outline-primary">
+                        Settlement Details
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Detailed View (Default) -->
+                <div id="detailedBalances" class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Member</th>
+                                <th class="text-end">Owes</th>
+                                <th class="text-end">Owed</th>
+                                <th class="text-end">Net Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle bg-primary text-white me-2">
+                                            {{ member.username|first|upper }}
+                                        </div>
+                                        <span>{{ member.username }}</span>
+                                        {% if member == user %}
+                                        <span class="badge bg-secondary ms-2">You</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-end text-danger">${{ member_balances|get_item:member|get_item:'owes' }}</td>
+                                <td class="text-end text-success">${{ member_balances|get_item:member|get_item:'owed' }}</td>
+                                <td class="text-end {% if member_balances|get_item:member|get_item:'net_balance' > 0 %}text-success{% elif member_balances|get_item:member|get_item:'net_balance' < 0 %}text-danger{% endif %}">
+                                    {% with net_balance=member_balances|get_item:member|get_item:'net_balance' %}
+                                        {% if net_balance > 0 %}
+                                            +${{ net_balance }}
+                                        {% elif net_balance < 0 %}
+                                            -${{ net_balance|abs }}
+                                        {% else %}
+                                            $0.00
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Simplified View (Hidden by default) -->
+                <div id="simplifiedBalances" class="d-none">
+                    {% if simplified_debts %}
+                        <div class="p-3">
+                            <h6 class="mb-3">Simplified Settlement Plan</h6>
+                            <p class="text-muted small mb-3">This shows the minimum number of transactions needed to settle all debts.</p>
+                            
+                            <div class="list-group">
+                                {% for debtor, creditor, amount in simplified_debts %}
+                                    <div class="list-group-item list-group-item-action">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="fw-bold">{{ debtor.username }}</span>
+                                                <i class="fas fa-arrow-right mx-2"></i>
+                                                <span class="fw-bold">{{ creditor.username }}</span>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill">${{ amount }}</span>
+                                        </div>
+                                        
+                                        {% if debtor == user %}
+                                            <div class="mt-2">
+                                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#payModal{{ creditor.id }}">
+                                                    <i class="fas fa-check me-1"></i> I paid this
+                                                </button>
+                                            </div>
+                                        {% elif creditor == user %}
+                                            <div class="mt-2">
+                                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#receiveModal{{ debtor.id }}">
+                                                    <i class="fas fa-check me-1"></i> I received this
+                                                </button>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted">No debts to simplify in this group.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Group Stats -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Group Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Total Expenses</span>
+                    <span class="fw-bold">${{ group.total_expenses }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Number of Expenses</span>
+                    <span class="fw-bold">{{ group.expense_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Members</span>
+                    <span class="fw-bold">{{ group.member_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Your Balance</span>
+                    <span class="fw-bold {% if group.net_balance > 0 %}text-success{% elif group.net_balance < 0 %}text-danger{% endif %}">
+                        {% if group.net_balance > 0 %}
+                            +${{ group.net_balance }}
+                        {% elif group.net_balance < 0 %}
+                            -${{ group.net_balance|abs }}
+                        {% else %}
+                            $0.00
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <!-- Currency Conversion (Optional) -->
+                {% if user.profile.preferred_currency and user.profile.preferred_currency != 'USD' %}
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>In {{ user.profile.preferred_currency }}</span>
+                    <span class="fw-bold {% if group.net_balance > 0 %}text-success{% elif group.net_balance < 0 %}text-danger{% endif %}">
+                        {% if group.net_balance > 0 %}
+                            +{{ group.net_balance_converted }}
+                        {% elif group.net_balance < 0 %}
+                            -{{ group.net_balance_converted|abs }}
+                        {% else %}
+                            0.00
+                        {% endif %}
+                        {{ user.profile.preferred_currency }}
+                    </span>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">Exchange rate: 1 USD = {{ exchange_rate }} {{ user.profile.preferred_currency }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Group Members -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Group Details</h5>
+                <div>
+                    {% if request.user == group.created_by %}
+                    <a href="{% url 'edit_group' group_id=group.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'invite_to_group' group_id=group.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-user-plus me-1"></i> Add Members
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for member in members %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle bg-primary text-white me-2">
+                                {{ member.username|first|upper }}
+                            </div>
+                            <span>{{ member.username }}</span>
+                            {% if member == user %}
+                            <span class="badge bg-secondary ms-2">You</span>
+                            {% endif %}
+                        </div>
+                        {% if member == group.created_by %}
+                        <span class="badge bg-info">Admin</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Expenses -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Expenses</h5>
+        <div>
+            <!-- Search and Filter -->
+            <div class="dropdown d-inline-block me-2">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end p-3" style="width: 250px;">
+                    <form id="expenseFilterForm" action="{% url 'group_detail' group.id %}" method="get">
+                        <li>
+                            <div class="mb-3">
+                                <label class="form-label">Date Range</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="date" class="form-control" name="start_date" value="{{ request.GET.start_date }}">
+                                    <span class="input-group-text">to</span>
+                                    <input type="date" class="form-control" name="end_date" value="{{ request.GET.end_date }}">
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="mb-3">
+                                <label class="form-label">Paid By</label>
+                                <select class="form-select form-select-sm" name="paid_by">
+                                    <option value="">All Members</option>
+                                    {% for member in members %}
+                                    <option value="{{ member.id }}" {% if request.GET.paid_by == member.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ member.username }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="mb-3">
+                                <label class="form-label">Amount Range</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" name="min_amount" placeholder="Min" value="{{ request.GET.min_amount }}">
+                                    <span class="input-group-text">to</span>
+                                    <input type="number" class="form-control" name="max_amount" placeholder="Max" value="{{ request.GET.max_amount }}">
+                                </div>
+                            </div>
+                        </li>
+                        <li class="text-center">
+                            <button type="submit" class="btn btn-sm btn-primary me-2">Apply</button>
+                            <a href="{% url 'group_detail' group.id %}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                        </li>
+                    </form>
+                </ul>
+            </div>
+            
+            <a href="{% url 'group_expense_history' group.id %}" class="btn btn-sm btn-outline-primary">
+                View All
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_expenses %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Paid By</th>
+                        <th>Amount</th>
+                        <th>Split Type</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in recent_expenses %}
+                    <tr class="expense-item">
+                        <td>{{ expense.created_at|date:"M d" }}</td>
+                        <td>
+                            <a href="{% url 'expense_detail' expense.id %}" class="text-decoration-none">
+                                {{ expense.title }}
+                            </a>
+                            {% if expense.parent_expense %}
+                            <span class="badge bg-info ms-1">Child</span>
+                            {% endif %}
+                            {% if expense.recurring_expense %}
+                            <span class="badge bg-warning ms-1">Recurring</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-primary text-white me-2">
+                                    {{ expense.paid_by.username|first|upper }}
+                                </div>
+                                <span>{{ expense.paid_by.username }}</span>
+                                {% if expense.paid_by == user %}
+                                <span class="badge bg-secondary ms-2">You</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>${{ expense.amount }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                {{ expense.get_split_type_display }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{% url 'expense_detail' expense.id %}">
+                                        <i class="fas fa-eye me-2"></i> View Details
+                                    </a></li>
+                                    {% if expense.paid_by == user %}
+                                    <li><a class="dropdown-item" href="{% url 'edit_expense' expense.id %}">
+                                        <i class="fas fa-edit me-2"></i> Edit
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'delete_expense' expense.id %}">
+                                        <i class="fas fa-trash me-2"></i> Delete
+                                    </a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center p-4">
+            <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-3">No expenses in this group yet</p>
+            <a href="{% url 'add_expense' %}?group={{ group.id }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Add First Expense
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Invite Member Modal -->
+<div class="modal fade" id="inviteMemberModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'invite_to_group' group.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Invite to {{ group.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="form-text">Enter the email address of the person you want to invite.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="message" class="form-label">Message (Optional)</label>
+                        <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+                    </div>
+                    <!-- Email Notification Option -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="sendNotification" name="send_notification" checked>
+                        <label class="form-check-label" for="sendNotification">
+                            Send email notification to the invited user
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Invitation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS for avatar circles -->
+<style>
+    .avatar-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    /* Dark Mode Styles (will be toggled via JavaScript) */
+    body.dark-mode {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .card {
+        background-color: #1e1e1e;
+        border-color: #333;
+    }
+    
+    body.dark-mode .table {
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .table-light {
+        background-color: #2c2c2c;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .modal-content {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .form-control,
+    body.dark-mode .form-select {
+        background-color: #2c2c2c;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .text-muted {
+        color: #aaa !important;
+    }
+    
+    body.dark-mode .navbar {
+        background-color: #1a1a1a !important;
+    }
+    
+    body.dark-mode .footer {
+        background-color: #1a1a1a !important;
+        color: #aaa;
+    }
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Custom template filter for dictionary access
+    if (!window.django) {
+        window.django = {};
+    }
+    django.get_item = function(dict, key) {
+        return dict[key] || {};
+    };
+    
+    // Toggle between detailed and simplified balance views
+    document.addEventListener('DOMContentLoaded', function() {
+        const detailedView = document.getElementById('detailedView');
+        const simplifiedView = document.getElementById('simplifiedView');
+        const detailedBalances = document.getElementById('detailedBalances');
+        const simplifiedBalances = document.getElementById('simplifiedBalances');
+        
+        detailedView.addEventListener('change', function() {
+            if (this.checked) {
+                detailedBalances.classList.remove('d-none');
+                simplifiedBalances.classList.add('d-none');
+            }
+        });
+        
+        simplifiedView.addEventListener('change', function() {
+            if (this.checked) {
+                detailedBalances.classList.add('d-none');
+                simplifiedBalances.classList.remove('d-none');
+            }
+        });
+        
+        // Dark Mode Toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        if (darkModeToggle) {
+            // Check for saved preference
+            const darkModeEnabled = localStorage.getItem('darkModeEnabled') === 'true';
+            
+            // Apply saved preference
+            if (darkModeEnabled) {
+                document.body.classList.add('dark-mode');
+                darkModeToggle.checked = true;
+            }
+            
+            // Toggle dark mode
+            darkModeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    document.body.classList.add('dark-mode');
+                    localStorage.setItem('darkModeEnabled', 'true');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    localStorage.setItem('darkModeEnabled', 'false');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

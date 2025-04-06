@@ -1,0 +1,142 @@
+/* Global Styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.footer {
+    margin-top: auto;
+}
+
+/* Money Amount Styling */
+.amount-positive {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.amount-negative {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.amount-neutral {
+    color: #6c757d;
+}
+
+/* Card Styling */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+/* Group Cards */
+.group-card {
+    height: 100%;
+}
+
+.group-card .card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.group-card .card-footer {
+    margin-top: auto;
+}
+
+/* Expense List */
+.expense-item {
+    transition: background-color 0.2s ease;
+}
+
+.expense-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Form Styling */
+.form-label.required:after {
+    content: " *";
+    color: #dc3545;
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* Dashboard Summary */
+.summary-card {
+    text-align: center;
+    border-radius: 0.5rem;
+}
+
+.summary-card .card-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.summary-card .amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Responsive Tables */
+@media (max-width: 767.98px) {
+    .table-responsive-cards .table-header {
+        display: none;
+    }
+    
+    .table-responsive-cards tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+    
+    .table-responsive-cards tbody td {
+        display: block;
+        text-align: right;
+        padding: 0.5rem;
+    }
+    
+    .table-responsive-cards tbody td:before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+    }
+}
+
+/* Loading Spinner */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Settlement Styles */
+.settlement-card {
+    border-left: 5px solid;
+}
+
+.settlement-card.you-pay {
+    border-left-color: #dc3545;
+}
+
+.settlement-card.you-receive {
+    border-left-color: #28a745;
+}
