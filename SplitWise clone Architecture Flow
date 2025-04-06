@@ -1,0 +1,84 @@
+                 ┌─────────────────────────┐
+                 │  User Authentication    │
+                 │ - Register/Login        │
+                 │ - Profile Management    │
+                 └──────────┬──────────────┘
+                            │
+                            ▼
+                 ┌─────────────────────────┐
+                 │    Group Management     │
+                 │ - Create/Join Groups    │
+                 │ - Admin: Add/Remove     │
+                 │   Members               │
+                 └──────────┬──────────────┘
+                            │
+                            ▼
+                 ┌─────────────────────────┐
+                 │   Expense Management    │
+                 │ - Add Group Expenses    │
+                 │ - Split Methods         │
+                 │ - View Expense History  │
+                 └──────────┬──────────────┘
+                            │
+                            ▼
+                 ┌─────────────────────────┐
+                 │ Settlement Management   │
+                 │ - Calculate Balances    │
+                 │ - View Summaries        │
+                 │ - Record Settlements    │
+                 └──────────┬──────────────┘
+                            │
+          ┌─────────────────┴───────────────┐
+          ▼                                 ▼
+┌─────────────────────┐       ┌────────────────────────────┐
+│     Data Export      │       │     Recurring Expenses     │
+│ - Export to CSV      │       │ - Schedule Periodic Adds   │
+│ - Group/User History │       │ - Auto Add to Expenses     │
+└─────────────────────┘       └────────────────────────────┘
+
+
+
+### Project Architecture Flow
+1. User Authentication
+   
+   - Users can register, log in, and manage their profiles.
+   - Authentication is handled using Django's built-in authentication system.
+2. Group Management
+   
+   - Users can create groups and become the admin of those groups.
+   - Admins can add or remove members from the group.
+   - Each group has a list of members and associated expenses.
+3. Expense Management
+   
+   - Users can add expenses to a group.
+   - Expenses can be split among group members based on predefined criteria (equally, by percentage, etc.).
+   - Users can view the history of expenses for each group.
+4. Settlement Management
+   
+   - The application calculates the net balance for each member in a group.
+   - Users can view settlement summaries to see who owes whom and how much.
+   - Settlements can be recorded to update balances.
+5. Data Export
+   
+   - Users can export expense data to CSV format for offline access.
+   - This feature is available for both group-specific and user-specific expense histories.
+6. Recurring Expenses
+   
+   - Users can set up recurring expenses that automatically add to the group's expenses at specified intervals.
+### Components and Interactions
+- Frontend :
+  
+  - HTML templates and CSS for rendering the user interface.
+  - Forms for user input and interaction.
+- Backend :
+  
+  - Django views handle HTTP requests and responses.
+  - Business logic for managing groups, expenses, and settlements.
+- Database :
+  
+  - Models define the structure of data (e.g., User, Group, Expense, Debt).
+  - Queries are optimized using Django ORM and raw SQL where necessary.
+- Security :
+  
+  - Access control ensures only authorized users can perform certain actions (e.g., only group admins can add members).
+  - Data validation and error handling are implemented to maintain data integrity.
